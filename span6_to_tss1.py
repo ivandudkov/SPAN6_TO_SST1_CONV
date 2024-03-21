@@ -59,6 +59,8 @@ def create_tss1(hor_accel, vert_accel, heave, roll, pitch, status_f='F'):
     return tss1_message
 
 ###########################
+#####  Bin Datablock Reader
+###########################
 _ElementTypes = namedtuple(
     "_ElementTypes",
     [
@@ -158,7 +160,7 @@ class DataBlock:
             types.append(tuple(type_spec))
             del type_spec, fmt
             del idx, name, type_name, count
-        return types  # apparently it should remain a list
+        return types
 
     @staticmethod
     def _util_gen_elements(fields, names):
@@ -172,6 +174,7 @@ class DataBlock:
                 results.append(tuple([names[name_index], part_a]))
                 name_index += 1
         return results
+    
 ##############################
 ###  SPAN CPT Message Readers
 ##############################
