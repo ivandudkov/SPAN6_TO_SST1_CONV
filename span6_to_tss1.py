@@ -375,4 +375,17 @@ def read_span6_header(buffer):
     
     return header_dict, header_length
 
-
+def read_span6_message(buffer, message_id, verbose=False):
+    message = messages_dict[str(message_id)]
+    message_array = message._struct.unpack(buffer[0:message.size])
+    message_data = {}
+    
+    for num, name in enumerate(message._names):
+        message_data[name] = message_array[num]
+    
+    
+    if verbose:
+        for num, name in enumerate(message._names):
+            print(f'{name} : {message_array[num]}')
+            
+    return message_data
