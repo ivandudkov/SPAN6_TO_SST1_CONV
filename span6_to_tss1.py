@@ -309,6 +309,20 @@ inspvas_message = DataBlock(  # ID 508
     )
 ) 
 
+corrimudatas_message = DataBlock(  # ID 813
+    (
+        elemD_("week", elemT.u32),
+        elemD_("seconds", elemT.f64),
+        elemD_("pitch_rate", elemT.f64),
+        elemD_("roll_rate", elemT.f64),
+        elemD_("yaw_rate", elemT.f64),
+        elemD_("lateral_acc", elemT.f64),
+        elemD_("longitudinal_acc", elemT.f64),
+        elemD_("vertical_acc", elemT.f64),
+        elemD_("CRC", elemT.c8, 4),
+    )
+) 
+
 syncheave_message = DataBlock(  # ID 1708
     (
         elemD_("heave", elemT.f64),
@@ -330,7 +344,12 @@ heave_message = DataBlock(  # ID 1382
 messages_dict = {"1462": rawimusxb_message, "1457": insattx_message,
                  "319": insatts_message, "1465": inspvax_message,
                  "508": inspvas_message, "1708": syncheave_message,
-                 "1382": heave_message}
+                 "1382": heave_message, "813": corrimudatas_message}
+
+
+long_start = bytes.fromhex('AA 44 12')
+short_start = bytes.fromhex('AA 44 13')
+ascii_usb_info = bytes.fromhex('3C 49 4E')
 
 ##############################
 
@@ -339,45 +358,65 @@ def check_header_type(buffer):
     if len(buffer) != 3:
         raise RuntimeError("Buffer's length is not 3 bytes!")
     
-    long_start = bytes.fromhex('AA 44 12')
-    short_start = bytes.fromhex('AA 44 13')
-    
     header = 'UNKN'
     
     if long_start == buffer:
         header = 'LONG'
     elif short_start == buffer:
         header = 'SHORT'
+    elif ascii_usb_info == buffer:
+        header = 'INS_UPDATE'
         
     return header
 
+def get_insupdate_size(buffer, offset):
 
-def read_span6_header(buffer):
-    header = check_header_type(buffer[0:3])
+    loop = True
+    header_size = 0
+
+    # Scan insupdate length
+    while loop:
+        try:
+            buffer[offset + header_size:offset + header_size+1].decode(encoding='utf-8', errors='strict')
+        except:
+            loop = False
+        else:
+            header_size += 1
+    
+    return header_size
+
+
+def read_span6_header(buffer, offset):
+    header = check_header_type(buffer[offset:offset+3])
     header_dict = {}
     
     if header == "LONG":
         header_length = 28
-        header_array = header_long._struct.unpack(buffer[0:header_long.size])
+        header_array = header_long._struct.unpack(buffer[offset:offset+header_long.size])
         for num, name in enumerate(header_long._names):
             header_dict[name] = header_array[num]
             
     elif header == "SHORT":
         header_length = 12
-        header_array = header_short._struct.unpack(buffer[0:header_short.size])
+        header_array = header_short._struct.unpack(buffer[offset:offset+header_short.size])
         
         for num, name in enumerate(header_short._names):
             header_dict[name] = header_array[num]
+            
+    elif header == "INS_UPDATE":
+        header_length = get_insupdate_size(buffer, offset)
         
+        header_array = buffer[offset:offset+header_length]
+        header_dict["string"] = header_array
             
     else:
         raise RuntimeError("Header is unknown or buffer is not at header start")
     
     return header_dict, header_length
 
-def read_span6_message(buffer, message_id, verbose=False):
+def read_span6_message(buffer, offset, message_id, verbose=False):
     message = messages_dict[str(message_id)]
-    message_array = message._struct.unpack(buffer[0:message.size])
+    message_array = message._struct.unpack(buffer[offset:offset+message.size])
     message_data = {}
     
     for num, name in enumerate(message._names):
