@@ -393,12 +393,14 @@ ascii_usb_info = bytes.fromhex('3C 49 4E')
 
 def check_header_type(buffer):
     
-    if len(buffer) != 3:
-        raise RuntimeError("Buffer's length is not 3 bytes!")
+    # if len(buffer) != 3:
+    #     raise RuntimeError("Buffer's length is not 3 bytes!")
     
     header = 'UNKN'
     
-    if long_start == buffer:
+    if len(buffer) != 3:
+        header = 'OVER'
+    elif long_start == buffer:
         header = 'LONG'
     elif short_start == buffer:
         header = 'SHORT'
@@ -406,6 +408,21 @@ def check_header_type(buffer):
         header = 'INS_UPDATE'
         
     return header
+
+def find_header(buffer):
+    offset = 0
+    
+    loop = True
+    while loop:
+        header = check_header_type(buffer[offset:offset+3])
+        
+        if header == "UNKN":
+            offset += 1
+        else:
+            loop = False
+    
+    return header, offset
+
 
 def get_insupdate_size(buffer, offset):
 
@@ -424,8 +441,8 @@ def get_insupdate_size(buffer, offset):
     return header_size
 
 
-def read_span6_header(buffer, offset):
-    header = check_header_type(buffer[offset:offset+3])
+def read_span6_header(buffer, header, offset):
+
     header_dict = {}
     
     if header == "LONG":
@@ -533,3 +550,4 @@ def pick_baud_rate():
             else:
                 c_true = False
         return baud_rate_list[input_baud]
+    

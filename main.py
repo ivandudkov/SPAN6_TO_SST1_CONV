@@ -1,14 +1,14 @@
 import numpy as np
 import serial
+import time
+import threading
 
 import span6_to_tss1 as rs6
 
 data_span6 = r'.\data\20231213124021_svVexel_1312green2.span6'
 
 if __name__ == '__main__':
-    com_rx_buf = ''
-    com_tx_buf = '' # send buffer
-    
+  
     port_list= rs6.get_com_list() # List of available serial ports
     
     print('Please, pick RX COM (that receives attitude data)')
@@ -20,69 +20,80 @@ if __name__ == '__main__':
     tx_com_name = rs6.pick_comport(port_list)
     tx_com_baud = rs6.pick_baud_rate()
     com_tx = rs6.serial_open(tx_com_name, tx_com_baud)
+                
     
+    loop = True
+    hor_accel = 0
+    vert_accel = 0
+    heave = 0
+    roll = 0
+    pitch = 0
+    rx_buf = ''
     
-            
-            
-            
+    while loop:
+        try:
+            rx_buf = ''
+            rx_buf = com_rx.read()
+            if rx_buf != b'':
+                time.sleep(0.005)
+                rx_buf = rx_buf + com_rx.read_all()
+                
+                while 3 > len(rx_buf):
+                    rx_buf = rx_buf + com_rx.read(3 - len(rx_buf))
+                header, offset = rs6.find_header(rx_buf)
+                
+                if header == "SHORT" or header == "LONG":
+                    print(header)
+                    while offset + 28 > len(rx_buf):
+                        rx_buf = rx_buf + com_rx.read(offset + 28 - len(rx_buf))
+                        
+                    header_dict, header_len = rs6.read_span6_header(rx_buf, header, offset)
+                    message_start = offset + header_len
+                    
+                    message_len = header_dict["message_length"]
+                    message_id = header_dict['message_id']
+                    
+                    while message_start + message_len + 4 > len(rx_buf):
+                        rx_buf = rx_buf + com_rx.read(message_start + message_len + 4 - len(rx_buf))
+                    
+                    if message_id == 1465:
+                        msg_dir = rs6.read_span6_message(rx_buf, message_start, message_id)
+                        
+                        hor_accel = msg_dir["up_vel"]/200
+                        vert_accel = np.sqrt(msg_dir["north_vel"]**2 + msg_dir["east_vel"]**2)/200
+                        roll = msg_dir["roll"]
+                        pitch = msg_dir["pitch"]
+                        
+                    elif message_id == 1708:
+                        msg_dir = rs6.read_span6_message(rx_buf, message_start, message_id)
+                        
+                        hor_accel = msg_dir["vertical_acc"]*200
+                        vert_accel = np.sqrt(msg_dir["lateral_acc"]**2 + msg_dir["longitudinal_acc"]**2)*200
+                        roll = msg_dir["roll_rate"]*200
+                        pitch = msg_dir["pitch_rate"]*200
+                        
+                    elif message_id == 813:
+                        msg_dir = rs6.read_span6_message(rx_buf, message_start, message_id)
+                        heave = msg_dir["heave"]
+                    
+                    tss1 = rs6.create_tss1(hor_accel=hor_accel, vert_accel=vert_accel, heave=heave, roll=roll, pitch=pitch)
+                    com_tx.write(tss1.encode('utf-8'))
+                    print(tss1)
+
+            time.sleep(0.005)
+        except RuntimeError as error:
+            print(error)
+            # tss1 = rs6.create_tss1(hor_accel=hor_accel, vert_accel=vert_accel, heave=heave, roll=roll, pitch=pitch)
+            # print(tss1)
+        
+    
     # with open(data_span6, 'rb') as f1:
-    #     buffer = f1.read()
+    #     buf = f1.read()
+        
+    # com_tx.write(buf[0:10000])
+    # rs6.serial_close(com_tx)
+    # i = 0
+    # while i < 10:
+    #     com_tx.write(buf)
+    #     i+= 1 
 
-    # offset = 0
-    # loop = True
-    # messages = []
-    # end = 0
-
-    # hor_accel = 1.0
-    # vert_accel = 1.0
-    # heave = 1.0
-    # roll = 1.0
-    # pitch = 1.0
-    # num = 0
-    # error_num = 0
-    # with open(r'.\data\test.txt', 'w') as f2:
-
-    #     while loop:
-    #         try:
-    #             if len(buffer) == offset:
-    #                 print('end of the file')
-    #                 loop = False
-
-    #             header_dict, header_len = rs6.read_span6_header(buffer, offset)
-                
-    #             if header_len != 28 and header_len != 12:
-    #                 end = offset+header_len
-    #                 # print(header_dict["string"])
-    #                 messages.append(0)
-    #             else:
-    #                 message_len = header_dict["message_length"]
-    #                 mid = header_dict['message_id']
-                    
-    #                 end = offset+header_len+message_len+4
-    #                 messages.append(mid)
-                    
-                    
-    #                 if mid == 1465:
-
-    #                     print(mid)
-    #                     print(num)
-    #                     num += 1
-    #                     msg_dir = rs6.read_span6_message(buffer, offset, mid)
-    #                     hor_accel = msg_dir["up_vel"]/100
-    #                     vert_accel = np.sqrt(msg_dir["north_vel"]**2 + msg_dir["east_vel"]**2)/100
-    #                     roll = msg_dir["roll"]
-    #                     pitch = msg_dir["pitch"]
-                            
-    #             offset = end
-                
-    #             tss1 = rs6.create_tss1(hor_accel=hor_accel, vert_accel=vert_accel, heave=heave, roll=roll, pitch=pitch)
-                
-    #             f2.write(tss1)
-    #         except RuntimeError as error:
-    #             if mid == 1465:
-    #                 print(f'error_num: {error_num}')
-    #                 error_num += 1
-    #             # print(mid)
-    #             # print(msg_dir)
-    #             print(error)
-    #             loop = True
