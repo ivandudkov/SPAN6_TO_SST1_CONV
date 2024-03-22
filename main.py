@@ -1,11 +1,9 @@
 import numpy as np
-import serial
 import time
-import threading
 
 import span6_to_tss1 as rs6
 
-data_span6 = r'.\data\20231213124021_svVexel_1312green2.span6'
+
 
 if __name__ == '__main__':
   
