@@ -7,30 +7,42 @@ import numpy as np
 # ':00FFCA -0003F-0325    0319'
 # '<CR><LF> = 0x0D0x0A' # newline character
 
-def create_tss1(hor_accel, vert_accel, heave, roll, pitch, status_f='F'):
-   
-    hor_accel_b = ''  # two byte hex
+def create_tss1(hor_accel: float, vert_accel: float, heave: float, roll: float, pitch: float, status_f='F'):
+    
+    # "Эти проверки нужно перенести из функции TSS1 в другую часть программы"
+    if hor_accel > 9.81 or hor_accel < 0:
+        raise RuntimeError('Horizontal accel is wrong')
+    if vert_accel > 20.47 or vert_accel < -20.48:
+        raise RuntimeError('Vertical accel is wrong')
+    if heave > 99.99 or hor_accel < -99.99:
+        raise RuntimeError('Heave is wrong')
+    if roll > 99.99 or hor_accel < -99.99:
+        raise RuntimeError('Roll is wrong')
+    if pitch > 99.99 or hor_accel < -99.99:
+        raise RuntimeError('pitch is wrong')
+
+    hor_accel_b = ''  # two byte hex, 0 to 9.81 m/s^2
     hor_acc_lsb = 0.0383  # m/s^2
-    vert_accel_b = ''  # two byte hex
+    vert_accel_b = ''  # two byte hex, -20.48 to 20.47 m/s^2
     vert_accel_lsb = 0.000625  # m/s^2
     
-    heave_b = int()  # four digit integer
+    heave_b = int()  # four digit integer, -99.99 to 99.99 m
     heave_b_polarity = ' '  # space if positive, minus sign (-) if negative
     
     status_flag = status_f  # F if INS Active, H if INS has not fompleted an aligment
     
-    roll_b = int()  # four digit integer
+    roll_b = int()  # four digit integer, -99.99 to 99.99 deg
     roll_b_polarity = ' '  # space if positive, minus sign (-) if negative
     
-    pitch_b = int()  # four digit integer
+    pitch_b = int()  # four digit integer, -99.99 to 99.99 deg
     pitch_b_polarity = ' '  # space if positive, minus sign (-) if negative
     
     if hor_accel >= 9.771:
         hor_accel_b = struct.pack('B', int(hor_accel/hor_acc_lsb)).hex().upper()
     else:
-        hor_accel_b = struct.pack('B', round(hor_accel/hor_acc_lsb)).hex().upper()
+        hor_accel_b = struct.pack('B', int(round(hor_accel/hor_acc_lsb))).hex().upper()
     
-    vert_accel_b = struct.pack('h',round(vert_accel/vert_accel_lsb)).hex().upper()
+    vert_accel_b = struct.pack('h',int(round(vert_accel/vert_accel_lsb))).hex().upper()
     
     if heave < 0:
         heave_b_polarity = '-'
@@ -54,9 +66,33 @@ def create_tss1(hor_accel, vert_accel, heave, roll, pitch, status_f='F'):
         pitch_b = round(pitch*100)
     
     
-    tss1_message = f':{vert_accel_b}{hor_accel_b} {heave_b_polarity}{heave_b:04d}{status_flag}{roll_b_polarity}{roll_b:04d} {pitch_b_polarity}{pitch_b:04d}\n'
+    tss1_message = f':{hor_accel_b}{vert_accel_b} {heave_b_polarity}{heave_b:04d}{status_flag}{roll_b_polarity}{roll_b:04d} {pitch_b_polarity}{pitch_b:04d}\n'
     
     return tss1_message
+
+def decode_tss1(tss1_message):
+    ### функция, чтобы проверить правильность генерации TSS1 (всё верно)
+    hor_acc_lsb = 0.0383  # m/s^2
+    vert_accel_lsb = 0.000625  # m/s^2
+    hor_accel_b = (struct.unpack('B', bytes.fromhex(tss1_message[1:3]))[0])*hor_acc_lsb
+    vert_accel_b = (struct.unpack('h', bytes.fromhex(tss1_message[3:8]))[0])*vert_accel_lsb
+    
+    print(tss1_message[1:3])
+    print(tss1_message[3:8])
+    print(f'horr: {hor_accel_b} vert: {vert_accel_b}')
+    
+    
+def test_tss1():
+    rng = np.random.default_rng()
+    hor_accel = rng.random()*9.81
+    vert_accel = rng.random()*20.47 - 20.47
+    heave = rng.random()*99.99 - 99.99
+    roll = rng.random()*99.99 - 99.99
+    pitch = rng.random()*99.99 - 99.99
+    print(f'{hor_accel} {vert_accel} {heave} {roll} {pitch}')
+    tss1 = create_tss1(hor_accel=hor_accel, vert_accel=vert_accel, heave=heave, roll=roll, pitch=pitch)
+    print(tss1)
+    decode_tss1(tss1)
 
 ###########################
 #####  Bin Datablock Reader
