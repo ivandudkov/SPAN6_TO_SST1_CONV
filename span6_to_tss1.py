@@ -2,6 +2,8 @@ import struct
 from collections import namedtuple
 
 import numpy as np
+import serial
+import serial.tools.list_ports
 
 # TSS1 string example
 # ':00FFCA -0003F-0325    0319'
@@ -450,6 +452,7 @@ def read_span6_header(buffer, offset):
     
     return header_dict, header_length
 
+
 def read_span6_message(buffer, offset, message_id, verbose=False):
     message = messages_dict[str(message_id)]
     message_array = message._struct.unpack(buffer[offset:offset+message.size])
@@ -464,3 +467,69 @@ def read_span6_message(buffer, offset, message_id, verbose=False):
             print(f'{name} : {message_array[num]}')
             
     return message_data
+
+
+def rad_to_deg(rad):
+    return rad*180/np.pi
+
+
+################################
+##### COMport block
+    
+def get_com_list():
+    global port_list
+    port_list = serial.tools.list_ports.comports()
+    return port_list
+
+def serial_open(port_name, baud):
+    port = serial.Serial(port_name, baud, timeout=0.01)
+    if port.isOpen():
+        print(port_name, " open success")
+        return port
+    else:
+        print(port_name, " open failed")
+    
+def serial_close(port):
+    port.close()
+    print(port.name + " closed")
+    
+##################################
+##### CLI Interface
+def pick_comport(port_list):
+    print("COM PORTS:")
+    for num, port in enumerate(port_list):
+        print(f'{num} {port}')
+    a_true = True
+    while a_true:
+        try:
+            print("Please type the COM PORT number")
+            input_com = int(input())
+            if input_com > len(port_list) - 1:
+                raise RuntimeError("Invalid COM PORT")
+            
+        except:
+            print('Input value is incorrect. Please enter correct value (integer)')
+            pass
+        else:
+            a_true = False
+    return port_list[input_com].device
+
+def pick_baud_rate():
+        baud_rate_list = [2400, 4800, 9600, 19200, 38400, 57600, 115200]
+        print("Please, pick baud rate")
+        print("Baud Rates:")
+        for num, rate in enumerate(baud_rate_list):
+            print(f'{num} {rate}')
+        c_true = True
+        while c_true:
+            try:
+                print("Please type the Baud Rate number")
+                input_baud = int(input())
+                if input_baud > len(baud_rate_list) - 1:
+                    raise RuntimeError("Invalid Baud Rate")
+            except:
+                print('Input value is incorrect. Please enter correct value (it should be integer)')
+                pass
+            else:
+                c_true = False
+        return baud_rate_list[input_baud]
