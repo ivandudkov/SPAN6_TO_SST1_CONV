@@ -1,6 +1,5 @@
-import numpy as np
 import time
-
+import math
 import span6_to_tss1 as rs6
 
 
@@ -58,7 +57,7 @@ if __name__ == '__main__':
                         msg_dir = rs6.read_span6_message(rx_buf, message_start, message_id)
                         
                         hor_accel = msg_dir["up_vel"]/200
-                        vert_accel = np.sqrt(msg_dir["north_vel"]**2 + msg_dir["east_vel"]**2)/200
+                        vert_accel = math.sqrt(msg_dir["north_vel"]**2 + msg_dir["east_vel"]**2)/200
                         roll = msg_dir["roll"]
                         pitch = msg_dir["pitch"]
                         
@@ -66,7 +65,7 @@ if __name__ == '__main__':
                         msg_dir = rs6.read_span6_message(rx_buf, message_start, message_id)
                         
                         hor_accel = msg_dir["vertical_acc"]*200
-                        vert_accel = np.sqrt(msg_dir["lateral_acc"]**2 + msg_dir["longitudinal_acc"]**2)*200
+                        vert_accel = math.sqrt(msg_dir["lateral_acc"]**2 + msg_dir["longitudinal_acc"]**2)*200
                         roll = msg_dir["roll_rate"]*200
                         pitch = msg_dir["pitch_rate"]*200
                         
