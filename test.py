@@ -1,6 +1,7 @@
 import numpy as np
 from span6_to_tss1 import create_tss1
 import struct
+import time
 # Test COM
 import serial
 ser3 = serial.Serial('COM8', 115200, timeout=0.005)

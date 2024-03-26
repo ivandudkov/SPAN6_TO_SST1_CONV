@@ -32,7 +32,7 @@ if __name__ == '__main__':
             rx_buf = ''
             rx_buf = com_rx.read()
             if rx_buf != b'':
-                time.sleep(0.005)
+                time.sleep(0.02)
                 rx_buf = rx_buf + com_rx.read_all()
                 
                 while 3 > len(rx_buf):
@@ -56,18 +56,18 @@ if __name__ == '__main__':
                     if message_id == 1465:
                         msg_dir = rs6.read_span6_message(rx_buf, message_start, message_id)
                         
-                        hor_accel = msg_dir["up_vel"]/200
-                        vert_accel = math.sqrt(msg_dir["north_vel"]**2 + msg_dir["east_vel"]**2)/200
+                        hor_accel = msg_dir["up_vel"]*100
+                        vert_accel = math.sqrt(msg_dir["north_vel"]**2 + msg_dir["east_vel"]**2)*100
                         roll = msg_dir["roll"]
                         pitch = msg_dir["pitch"]
                         
                     elif message_id == 1708:
                         msg_dir = rs6.read_span6_message(rx_buf, message_start, message_id)
                         
-                        hor_accel = msg_dir["vertical_acc"]*200
-                        vert_accel = math.sqrt(msg_dir["lateral_acc"]**2 + msg_dir["longitudinal_acc"]**2)*200
-                        roll = msg_dir["roll_rate"]*200
-                        pitch = msg_dir["pitch_rate"]*200
+                        hor_accel = msg_dir["vertical_acc"]*100
+                        vert_accel = math.sqrt(msg_dir["lateral_acc"]**2 + msg_dir["longitudinal_acc"]**2)*100
+                        roll = msg_dir["roll_rate"]*100
+                        pitch = msg_dir["pitch_rate"]*100
                         
                     elif message_id == 813:
                         msg_dir = rs6.read_span6_message(rx_buf, message_start, message_id)
@@ -77,20 +77,7 @@ if __name__ == '__main__':
                     com_tx.write(tss1.encode('utf-8'))
                     print(tss1)
 
-            time.sleep(0.005)
+            time.sleep(0.02)
         except RuntimeError as error:
             print(error)
-            # tss1 = rs6.create_tss1(hor_accel=hor_accel, vert_accel=vert_accel, heave=heave, roll=roll, pitch=pitch)
-            # print(tss1)
-        
-    
-    # with open(data_span6, 'rb') as f1:
-    #     buf = f1.read()
-        
-    # com_tx.write(buf[0:10000])
-    # rs6.serial_close(com_tx)
-    # i = 0
-    # while i < 10:
-    #     com_tx.write(buf)
-    #     i+= 1 
 
